@@ -145,7 +145,8 @@ function spawnTarget() {
   return {
     x: Math.random() * canvas.width,
     y: Math.random() * canvas.height,
-    radius: Math.max(8, 25 - level * 2)
+    radius: 20,
+     color: "#00ffcc"
   };
 }
 
@@ -217,25 +218,25 @@ if (dist < target.radius) {
 
 // -------- DRAW --------
 function drawTarget() {
-  ctx.strokeStyle = "white";
+  // outer ring
+  ctx.strokeStyle = target.color;
   ctx.lineWidth = 2;
 
   ctx.beginPath();
   ctx.arc(target.x, target.y, target.radius, 0, Math.PI * 2);
   ctx.stroke();
 
+  // inner ring
   ctx.beginPath();
   ctx.arc(target.x, target.y, target.radius / 2, 0, Math.PI * 2);
   ctx.stroke();
 
+  // center dot
+  ctx.fillStyle = target.color;
   ctx.beginPath();
-  ctx.moveTo(target.x - target.radius, target.y);
-  ctx.lineTo(target.x + target.radius, target.y);
-  ctx.moveTo(target.x, target.y - target.radius);
-  ctx.lineTo(target.x, target.y + target.radius);
-  ctx.stroke();
+  ctx.arc(target.x, target.y, 4, 0, Math.PI * 2);
+  ctx.fill();
 }
-
 // -------- UI --------
 
 let lastRenderedState = "";
