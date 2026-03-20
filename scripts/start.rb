@@ -18,6 +18,7 @@ sleep 1
 puts "Opening game..."
 system("start ../aimTrainer/src/index.html")
 
+# cmd
 puts "Everything running!"
 
 # Keep alive
