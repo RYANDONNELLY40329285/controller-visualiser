@@ -115,6 +115,9 @@ const centerText = document.getElementById("centerText");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
+
+
+
 // -------- STATE --------
 let state = "menu";
 let lastState = "";
@@ -164,24 +167,52 @@ function endGame() {
   state = "results";
 }
 
+// -------- AUDIO --------
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playHitSound() {
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+
+  osc.type = "square";
+  osc.frequency.value = 600;
+
+  gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.1);
+}
+
 // -------- INPUT (CLICK ONLY) --------
 document.addEventListener("click", (e) => {
   if (state !== "playing") return;
+
+if (audioCtx.state === "suspended") {
+  audioCtx.resume();
+}
 
   clicks++;
 
   const dist = Math.hypot(e.clientX - target.x, e.clientY - target.y);
 
-  if (dist < target.radius) {
-    hits++;
+if (dist < target.radius) {
+  hits++;
 
-    const reaction = performance.now() - targetSpawnTime;
-    reactionTimes.push(reaction);
+  playHitSound(); 
 
-    level++;
-    target = spawnTarget();
-    targetSpawnTime = performance.now();
-  }
+  const reaction = performance.now() - targetSpawnTime;
+  reactionTimes.push(reaction);
+
+  level++;
+  target = spawnTarget();
+  targetSpawnTime = performance.now();
+}
+
+
 });
 
 // -------- DRAW --------
