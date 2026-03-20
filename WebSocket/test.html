@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<body>
+<h2>Mouse Monitor</h2>
+
+<p>X: <span id="x"></span></p>
+<p>Y: <span id="y"></span></p>
+<p>Speed: <span id="speed"></span></p>
+<p>Hz: <span id="hz"></span></p>
+<p>Latency: <span id="latency"></span> ms</p>
+
+<script>
+const ws = new WebSocket("ws://localhost:8080");
+
+ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+
+    document.getElementById("x").textContent = data.x;
+    document.getElementById("y").textContent = data.y;
+    document.getElementById("speed").textContent = Math.round(data.speed);
+    document.getElementById("hz").textContent = Math.round(data.hz);
+    document.getElementById("latency").textContent = data.latency.toFixed(2);
+};
+</script>
+
+</body>
+</html>

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Aim Trainer Pro</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: radial-gradient(circle at center, #0a0a0a, #000000);
+      font-family: 'Segoe UI', monospace;
+      color: white;
+    }
+
+    #ui {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      font-size: 14px;
+      background: rgba(20, 20, 20, 0.6);
+      backdrop-filter: blur(10px);
+      padding: 15px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    #centerText {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+
+    .title {
+      font-size: 48px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
+    .status {
+      font-size: 12px;
+      margin-top: 10px;
+      opacity: 0.7;
+    }
+
+    button {
+      padding: 12px 28px;
+      font-size: 16px;
+      margin-top: 10px;
+      cursor: pointer;
+      border-radius: 8px;
+      border: none;
+      background: linear-gradient(135deg, #00ffcc, #0077ff);
+      color: black;
+      font-weight: bold;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 15px #00ffcc;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+<div id="ui"></div>
+<div id="centerText"></div>
+
+<script>
+
+// -------- WEBSOCKET (C++ DATA) --------
+let socket;
+let socketConnected = false;
+
+function connectSocket() {
+  socket = new WebSocket("ws://localhost:8080");
+
+  socket.onopen = () => {
+    console.log("Connected to C++ stream");
+    socketConnected = true;
+  };
+
+  socket.onclose = () => {
+    console.log("Disconnected, retrying...");
+    socketConnected = false;
+    setTimeout(connectSocket, 1000); // retry
+  };
+
+  socket.onerror = () => {
+    socketConnected = false;
+  };
+
+  socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+
+    prev.x = data.x;
+    prev.y = data.y;
+    smoothSpeed = data.speed;
+    pollingRate = data.hz;
+    latency = data.latency;
+  };
+}
+
+
+connectSocket();
+
+// -------- CANVAS --------
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const ui = document.getElementById("ui");
+const centerText = document.getElementById("centerText");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// -------- STATE --------
+let state = "menu";
+let lastState = "";
+
+let clicks = 0;
+let hits = 0;
+let reactionTimes = [];
+
+let target = null;
+let targetSpawnTime = 0;
+
+let gameTime = 30;
+let startTime = 0;
+
+let level = 1;
+
+// -------- MOUSE DATA (FROM C++) --------
+let prev = { x: 0, y: 0 };
+let smoothSpeed = 0;
+let pollingRate = 0;
+let latency = 0;
+
+// -------- TARGET --------
+function spawnTarget() {
+  return {
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    radius: Math.max(8, 25 - level * 2)
+  };
+}
+
+// -------- GAME --------
+function startGame() {
+  clicks = 0;
+  hits = 0;
+  reactionTimes = [];
+  level = 1;
+
+  startTime = performance.now();
+  target = spawnTarget();
+  targetSpawnTime = performance.now();
+
+  state = "playing";
+}
+
+function endGame() {
+  state = "results";
+}
+
+// -------- INPUT (CLICK ONLY) --------
+document.addEventListener("click", (e) => {
+  if (state !== "playing") return;
+
+  clicks++;
+
+  const dist = Math.hypot(e.clientX - target.x, e.clientY - target.y);
+
+  if (dist < target.radius) {
+    hits++;
+
+    const reaction = performance.now() - targetSpawnTime;
+    reactionTimes.push(reaction);
+
+    level++;
+    target = spawnTarget();
+    targetSpawnTime = performance.now();
+  }
+});
+
+// -------- DRAW --------
+function drawTarget() {
+  ctx.strokeStyle = "white";
+  ctx.lineWidth = 2;
+
+  ctx.beginPath();
+  ctx.arc(target.x, target.y, target.radius, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(target.x, target.y, target.radius / 2, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(target.x - target.radius, target.y);
+  ctx.lineTo(target.x + target.radius, target.y);
+  ctx.moveTo(target.x, target.y - target.radius);
+  ctx.lineTo(target.x, target.y + target.radius);
+  ctx.stroke();
+}
+
+// -------- UI --------
+
+let lastRenderedState = "";
+
+function updateUI() {
+  // Only re-render if state changed
+  if (state !== lastRenderedState) {
+    lastRenderedState = state;
+
+    if (state === "menu") {
+      centerText.innerHTML = `
+        <div class="title">AIM TRAINER</div>
+        <button id="startBtn">Start</button>
+        <div id="statusText" class="status"></div>
+      `;
+
+      const btn = document.getElementById("startBtn");
+      if (btn) {
+        btn.onclick = () => {
+          console.log("START CLICKED");
+          startGame();
+        };
+      }
+    }
+
+    if (state === "playing") {
+      centerText.innerHTML = "";
+    }
+
+    if (state === "results") {
+      const avgReaction = reactionTimes.length
+        ? reactionTimes.reduce((a,b)=>a+b,0)/reactionTimes.length
+        : 0;
+
+      centerText.innerHTML = `
+        <div class="title">RESULTS</div>
+        <div>Accuracy: ${(hits/clicks*100 || 0).toFixed(1)}%</div>
+        <div>Hits: ${hits}</div>
+        <div>Avg Reaction: ${avgReaction.toFixed(0)} ms</div>
+        <button id="backBtn">Back</button>
+      `;
+
+      const backBtn = document.getElementById("backBtn");
+      if (backBtn) backBtn.onclick = () => state = "menu";
+    }
+  }
+
+
+  if (state === "menu") {
+    const status = document.getElementById("statusText");
+    if (status) {
+      status.innerHTML = socketConnected
+        ? "🟢 C++ Connected"
+        : "🔴 Waiting for C++...";
+    }
+  }
+}
+
+// -------- STATS --------
+function updateStats() {
+  if (state !== "playing") {
+    ui.innerHTML = "";
+    return;
+  }
+
+  const elapsed = (performance.now() - startTime) / 1000;
+  const remaining = Math.max(0, gameTime - elapsed);
+
+  ui.innerHTML = `
+<b>POSITION</b><br>${prev.x}, ${prev.y}<br><br>
+<b>SPEED</b><br>${Math.round(smoothSpeed)} px/s<br><br>
+<b>PERFORMANCE</b><br>${Math.round(pollingRate)} Hz<br>${latency.toFixed(2)} ms<br><br>
+<b>ACCURACY</b><br>${hits}/${clicks} (${(hits/clicks*100 || 0).toFixed(1)}%)<br><br>
+<b>LEVEL</b><br>${level}<br><br>
+<b>TIME</b><br>${remaining.toFixed(1)}s
+  `;
+
+  if (remaining <= 0) endGame();
+}
+
+// -------- LOOP --------
+function loop() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (state === "playing" && target) {
+    drawTarget();
+  }
+
+  updateUI();
+  updateStats();
+
+  requestAnimationFrame(loop);
+}
+
+loop();
+
+</script>
+
+</body>
+</html>

@@ -1,51 +1,125 @@
+#include <winsock2.h>   // MUST come before windows.h
 #include <windows.h>
-#include <Xinput.h>
 #include <iostream>
-
-#pragma comment(lib, "Xinput.lib")
+#include <cmath>
+#include <chrono>
+#include <sstream>
+#include <ixwebsocket/IXWebSocket.h>
 
 int main() {
-    XINPUT_STATE state;
 
-    std::cout << "Controller Visualiser Started...\n";
-
-    while (true) {
-        ZeroMemory(&state, sizeof(XINPUT_STATE));
-
-        DWORD result = XInputGetState(0, &state);
-
-        if (result == ERROR_SUCCESS) {
-            system("cls"); 
-
-            auto& gamepad = state.Gamepad;
-
-            std::cout << "Controller Connected\n\n";
-
-            std::cout << "Buttons:\n";
-            if (gamepad.wButtons & XINPUT_GAMEPAD_A) std::cout << "A pressed\n";
-            if (gamepad.wButtons & XINPUT_GAMEPAD_B) std::cout << "B pressed\n";
-            if (gamepad.wButtons & XINPUT_GAMEPAD_X) std::cout << "X pressed\n";
-            if (gamepad.wButtons & XINPUT_GAMEPAD_Y) std::cout << "Y pressed\n";
-
-            if (gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER) std::cout << "LB pressed\n";
-            if (gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER) std::cout << "RB pressed\n";
-
-            std::cout << "\nTriggers:\n";
-            std::cout << "LT: " << (int)gamepad.bLeftTrigger << "\n";
-            std::cout << "RT: " << (int)gamepad.bRightTrigger << "\n";
-
-            std::cout << "\nThumbsticks:\n";
-            std::cout << "LX: " << gamepad.sThumbLX << "\n";
-            std::cout << "LY: " << gamepad.sThumbLY << "\n";
-            std::cout << "RX: " << gamepad.sThumbRX << "\n";
-            std::cout << "RY: " << gamepad.sThumbRY << "\n";
-        }
-        else {
-            std::cout << "Controller not connected\n";
-        }
-
-        Sleep(100); 
+    // Initialise Winsock FIRST
+    WSADATA wsaData;
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        std::cout << "❌ WSAStartup failed\n";
+        return 1;
     }
 
+
+
+    //  WebSocket setup
+    ix::WebSocket webSocket;
+webSocket.setUrl("ws://localhost:8080");
+
+    bool isConnected = false;
+
+    webSocket.setOnMessageCallback([&](const ix::WebSocketMessagePtr& msg) {
+        if (msg->type == ix::WebSocketMessageType::Open) {
+            std::cout << "Connected to server!\n";
+            isConnected = true;
+        }
+        else if (msg->type == ix::WebSocketMessageType::Error) {
+            std::cout << "Connection error: " << msg->errorInfo.reason << "\n";
+        }
+    });
+
+    std::cout << "Trying to connect...\n";
+webSocket.start();
+    webSocket.start();
+
+    
+int attempts = 0;
+
+while (!isConnected && attempts < 500) { // ~5 seconds
+    Sleep(10);
+    attempts++;
+}
+
+if (!isConnected) {
+    std::cout << "❌ Failed to connect after timeout\n";
+    return 1;
+}
+
+    POINT p, prev = {0, 0};
+
+    double smoothDX = 0.0;
+    double smoothDY = 0.0;
+    double smoothSpeed = 0.0;
+
+    double pollingRate = 0.0;
+    double latencyMs = 0.0;
+
+    const double alpha = 0.05;
+
+    auto prevTime = std::chrono::high_resolution_clock::now();
+
+    std::cout << " Mouse Performance Monitor + WebSocket Started...\n";
+
+    int counter = 0;
+
+    while (true) {
+
+        if (counter++ % 20 == 0) {
+        //    system("cls");
+        }
+
+        GetCursorPos(&p);
+
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        double deltaTime = std::chrono::duration<double>(currentTime - prevTime).count();
+        prevTime = currentTime;
+
+        if (deltaTime <= 0) continue;
+
+        double currentHz = 1.0 / deltaTime;
+        pollingRate = alpha * currentHz + (1 - alpha) * pollingRate;
+        latencyMs = alpha * (deltaTime * 1000.0) + (1 - alpha) * latencyMs;
+
+        int dx = p.x - prev.x;
+        int dy = p.y - prev.y;
+
+        smoothDX = alpha * dx + (1 - alpha) * smoothDX;
+        smoothDY = alpha * dy + (1 - alpha) * smoothDY;
+
+        double speed = std::sqrt(smoothDX * smoothDX + smoothDY * smoothDY) / deltaTime;
+        smoothSpeed = alpha * speed + (1 - alpha) * smoothSpeed;
+
+        prev = p;
+
+        // Send JSON data
+        std::stringstream ss;
+        ss << "{"
+           << "\"x\":" << p.x << ","
+           << "\"y\":" << p.y << ","
+           << "\"speed\":" << smoothSpeed << ","
+           << "\"hz\":" << pollingRate << ","
+           << "\"latency\":" << latencyMs
+           << "}";
+
+        if (isConnected) {
+            webSocket.send(ss.str());
+        }
+
+        // Console output
+        std::cout << "Position: " << p.x << ", " << p.y << "\n";
+        std::cout << "Speed: " << (int)smoothSpeed << " px/s\n";
+        std::cout << "Hz: " << (int)pollingRate << "\n";
+        std::cout << "Latency: " << latencyMs << " ms\n";
+
+        Sleep(5);
+    }
+
+    webSocket.stop();
+    WSACleanup();
     return 0;
 }
