@@ -92,8 +92,7 @@ function connectSocket() {
     socketConnected = false;
   };
 
-socket.onmessage = (event) => {
-  try {
+  socket.onmessage = (event) => {
     const data = JSON.parse(event.data);
 
     prev.x = data.x;
@@ -101,11 +100,8 @@ socket.onmessage = (event) => {
     smoothSpeed = data.speed;
     pollingRate = data.hz;
     latency = data.latency;
-
-  } catch (e) {
-    console.log("Bad data:", event.data);
-  }
-};
+  };
+}
 
 
 connectSocket();
