@@ -35,7 +35,7 @@ webSocket.setUrl("ws://localhost:8080");
 
     std::cout << "Trying to connect...\n";
 webSocket.start();
-    webSocket.start();
+
 
     
 int attempts = 0;
