@@ -2,7 +2,7 @@
 
 puts "Starting Aim Trainer..."
 
-# 1️Start Node server
+# 1Start Node server
 puts "Starting WebSocket server..."
 node_pid = spawn("cmd /c node server.js", chdir: "../WebSocket")
 
