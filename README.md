@@ -1,3 +1,5 @@
+![CI Pipeline](https://github.com/RyanDonnelly/controller-visualiser/actions/workflows/ci.yml/badge.svg)
+
 C++ (mouse.exe)
 ↓
 WebSocket Server (Node.js)
