@@ -365,3 +365,26 @@ test('multiple clients receive data simultaneously', (done) => {
         checkDone();
     });
 });
+
+test('position changes smoothly (no huge jumps)', (done) => {
+    const client = new WebSocket('ws://127.0.0.1:8080');
+
+    let prev = null;
+
+    client.on('message', (msg) => {
+        const data = JSON.parse(msg);
+
+        if (prev) {
+            const dx = Math.abs(data.x - prev.x);
+            const dy = Math.abs(data.y - prev.y);
+
+            expect(dx).toBeLessThan(2000);
+            expect(dy).toBeLessThan(2000);
+
+            client.close();
+            done();
+        }
+
+        prev = data;
+    });
+});
