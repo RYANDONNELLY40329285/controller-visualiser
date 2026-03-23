@@ -1,4 +1,4 @@
-[![CI Pipeline](https://github.com/RYANDONNELLY40329285/controller-visualiser/actions/workflows/ci.yml/badge.svg)
+![CI Pipeline](https://github.com/RYANDONNELLY40329285/controller-visualiser/actions/workflows/ci.yml/badge.svg)
 
 C++ (mouse.exe)
 ↓
