@@ -17,7 +17,9 @@ jobs:
       with:
         node-version: 18
 
-    
+   
+
+
     - name: Install Node dependencies
       working-directory: WebSocket
       run: npm install
@@ -30,13 +32,13 @@ jobs:
 
 
     - name: Compile C++ (mouse)
-      working-directory: ./controller-visuliser
+      working-directory: ./controller-visualiser
       run: |
         ls
         g++ src/main.cpp ixwebsocket/*.cpp -o mouse -I . -lssl -lcrypto -lpthread
 
     - name: Make binary executable
-      run: chmod +x controller-visuliser/mouse
+      run: chmod +x controller-visualiser/mouse
 
     - name: Run Jest tests
       working-directory: WebSocket
