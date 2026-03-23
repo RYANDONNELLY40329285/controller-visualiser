@@ -25,7 +25,7 @@ jobs:
     - name: Compile C++
       working-directory: controller-visualiser
       run: |
-        g++ src/main.cpp ixwebsocket/*.cpp -o mouse.exe -I . -lws2_32 -lssl -lcrypto
+         g++ src/main.cpp ixwebsocket/*.cpp -o mouse.exe -I . -lws2_32
 
     - name: Run tests
       working-directory: WebSocket
