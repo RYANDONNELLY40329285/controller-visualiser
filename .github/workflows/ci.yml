@@ -6,7 +6,7 @@ on:
 
 jobs:
   test:
-    runs-on: runs-on: windows-latest
+    runs-on: windows-latest
 
     steps:
     - name: Checkout repo
@@ -17,29 +17,16 @@ jobs:
       with:
         node-version: 18
 
-   
-
-
     - name: Install Node dependencies
       working-directory: WebSocket
       run: npm install
 
-   
-    - name: Install C++ dependencies
+    # 🟢 Compile C++ with Windows compiler
+    - name: Compile C++
+      working-directory: controller-visualiser
       run: |
-        sudo apt-get update
-        sudo apt-get install -y g++ libssl-dev
+        g++ src/main.cpp ixwebsocket/*.cpp -o mouse.exe -I . -lws2_32 -lssl -lcrypto
 
-
-    - name: Compile C++ (mouse)
-      working-directory: ./controller-visualiser
-      run: |
-        ls
-        g++ src/main.cpp ixwebsocket/*.cpp -o mouse -I . -lssl -lcrypto -lpthread
-
-    - name: Make binary executable
-      run: chmod +x controller-visualiser/mouse
-
-    - name: Run Jest tests
+    - name: Run tests
       working-directory: WebSocket
       run: npm test
