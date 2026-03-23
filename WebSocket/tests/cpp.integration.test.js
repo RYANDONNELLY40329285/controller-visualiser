@@ -249,3 +249,21 @@ test('data contains correct schema', (done) => {
 test('server handles invalid JSON safely', () => {
     expect(() => JSON.parse("INVALID_JSON")).toThrow();
 });
+
+test('data types are correct', (done) => {
+    const client = new WebSocket('ws://127.0.0.1:8080');
+
+    client.on('message', (msg) => {
+        const data = JSON.parse(msg);
+
+        expect(typeof data.x).toBe('number');
+        expect(typeof data.y).toBe('number');
+        expect(typeof data.speed).toBe('number');
+        expect(typeof data.hz).toBe('number');
+        expect(typeof data.latency).toBe('number');
+        expect(typeof data.state).toBe('string');
+
+        client.close();
+        done();
+    });
+});
