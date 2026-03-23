@@ -1,0 +1,40 @@
+name: CI Pipeline
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+   
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18
+
+    
+    - name: Install Node dependencies
+      run: |
+        cd WebSocket
+        npm install
+    - name: Install C++ dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y g++ libssl-dev
+
+ 
+    - name: Compile C++ (mouse)
+      run: |
+        cd controller-visuliser
+        g++ src/main.cpp ixwebsocket/*.cpp -o mouse -I . -lssl -lcrypto -lpthread
+
+    - name: Run Jest tests
+      run: |
+        cd WebSocket
+        npm test
