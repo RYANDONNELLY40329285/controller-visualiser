@@ -388,3 +388,19 @@ test('position changes smoothly (no huge jumps)', (done) => {
         prev = data;
     });
 });
+
+test('client disconnect does not crash server', (done) => {
+    const client = new WebSocket('ws://127.0.0.1:8080');
+
+    client.on('open', () => {
+        client.close();
+
+        // try reconnect
+        const newClient = new WebSocket('ws://127.0.0.1:8080');
+
+        newClient.on('open', () => {
+            newClient.close();
+            done();
+        });
+    });
+});
