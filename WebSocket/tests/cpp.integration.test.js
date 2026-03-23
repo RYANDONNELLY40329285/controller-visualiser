@@ -299,3 +299,43 @@ test('state reflects speed correctly', (done) => {
         done();
     });
 });
+
+test('hz (polling rate) is within realistic range', (done) => {
+    const client = new WebSocket('ws://127.0.0.1:8080');
+
+    client.on('message', (msg) => {
+        const data = JSON.parse(msg);
+
+        expect(data.hz).toBeGreaterThan(10);
+        expect(data.hz).toBeLessThan(1000);
+
+        client.close();
+        done();
+    });
+});
+
+test('multiple clients receive data simultaneously', (done) => {
+    const client1 = new WebSocket('ws://127.0.0.1:8080');
+    const client2 = new WebSocket('ws://127.0.0.1:8080');
+
+    let received1 = false;
+    let received2 = false;
+
+    function checkDone() {
+        if (received1 && received2) {
+            client1.close();
+            client2.close();
+            done();
+        }
+    }
+
+    client1.on('message', () => {
+        received1 = true;
+        checkDone();
+    });
+
+    client2.on('message', () => {
+        received2 = true;
+        checkDone();
+    });
+});
