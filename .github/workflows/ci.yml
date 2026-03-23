@@ -21,7 +21,7 @@ jobs:
       working-directory: WebSocket
       run: npm install
 
-    # 🟢 Compile C++ with Windows compiler
+    #  Compile C++ with Windows compiler
     - name: Compile C++
       working-directory: controller-visualiser
       run: |
