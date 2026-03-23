@@ -17,6 +17,7 @@ int main() {
 
 
 
+
     //  WebSocket setup
     ix::WebSocket webSocket;
 webSocket.setUrl("ws://localhost:8080");
@@ -67,57 +68,67 @@ if (!isConnected) {
 
     int counter = 0;
 
-    while (true) {
 
-        if (counter++ % 20 == 0) {
-        //    system("cls");
-        }
+while (true) {
 
-        GetCursorPos(&p);
+    GetCursorPos(&p);
 
-        auto currentTime = std::chrono::high_resolution_clock::now();
-        double deltaTime = std::chrono::duration<double>(currentTime - prevTime).count();
-        prevTime = currentTime;
+    auto currentTime = std::chrono::high_resolution_clock::now();
+    double deltaTime = std::chrono::duration<double>(currentTime - prevTime).count();
+    prevTime = currentTime;
 
-        if (deltaTime <= 0) continue;
+    if (deltaTime <= 0 || deltaTime > 0.1) continue; 
 
-        double currentHz = 1.0 / deltaTime;
-        pollingRate = alpha * currentHz + (1 - alpha) * pollingRate;
-        latencyMs = alpha * (deltaTime * 1000.0) + (1 - alpha) * latencyMs;
+    double currentHz = 1.0 / deltaTime;
+    pollingRate = alpha * currentHz + (1 - alpha) * pollingRate;
+    latencyMs = alpha * (deltaTime * 1000.0) + (1 - alpha) * latencyMs;
 
-        int dx = p.x - prev.x;
-        int dy = p.y - prev.y;
+    int dx = p.x - prev.x;
+    int dy = p.y - prev.y;
 
-        smoothDX = alpha * dx + (1 - alpha) * smoothDX;
-        smoothDY = alpha * dy + (1 - alpha) * smoothDY;
+    smoothDX = alpha * dx + (1 - alpha) * smoothDX;
+    smoothDY = alpha * dy + (1 - alpha) * smoothDY;
 
-        double speed = std::sqrt(smoothDX * smoothDX + smoothDY * smoothDY) / deltaTime;
-        smoothSpeed = alpha * speed + (1 - alpha) * smoothSpeed;
+    double speed = std::sqrt(smoothDX * smoothDX + smoothDY * smoothDY) / deltaTime;
+    smoothSpeed = alpha * speed + (1 - alpha) * smoothSpeed;
 
-        prev = p;
+    prev = p;
 
-        // Send JSON data
-        std::stringstream ss;
-        ss << "{"
-           << "\"x\":" << p.x << ","
-           << "\"y\":" << p.y << ","
-           << "\"speed\":" << smoothSpeed << ","
-           << "\"hz\":" << pollingRate << ","
-           << "\"latency\":" << latencyMs
-           << "}";
+   
+    std::string movementState;
+    if (smoothSpeed < 50) movementState = "idle";
+    else if (smoothSpeed < 300) movementState = "tracking";
+    else movementState = "flick";
 
-        if (isConnected) {
-            webSocket.send(ss.str());
-        }
+    
+    std::stringstream ss;
+    ss << "{"
+       << "\"x\":" << p.x << ","
+       << "\"y\":" << p.y << ","
+       << "\"speed\":" << smoothSpeed << ","
+       << "\"hz\":" << pollingRate << ","
+       << "\"latency\":" << latencyMs << ","
+       << "\"state\":\"" << movementState << "\""
+       << "}";
 
-        // Console output
+    if (isConnected) {
+        webSocket.send(ss.str());
+    }
+
+ 
+    static int printCounter = 0;
+    if (printCounter++ % 100 == 0) {
+        system("cls");
         std::cout << "Position: " << p.x << ", " << p.y << "\n";
         std::cout << "Speed: " << (int)smoothSpeed << " px/s\n";
         std::cout << "Hz: " << (int)pollingRate << "\n";
         std::cout << "Latency: " << latencyMs << " ms\n";
-
-        Sleep(5);
+        std::cout << "State: " << movementState << "\n";
     }
+
+    Sleep(5);
+}
+
 
     webSocket.stop();
     WSACleanup();
