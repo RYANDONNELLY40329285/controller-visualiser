@@ -267,3 +267,35 @@ test('data types are correct', (done) => {
         done();
     });
 });
+
+test('speed never exceeds unrealistic upper bound', (done) => {
+    const client = new WebSocket('ws://127.0.0.1:8080');
+
+    client.on('message', (msg) => {
+        const data = JSON.parse(msg);
+
+        expect(data.speed).toBeLessThan(100000); 
+
+        client.close();
+        done();
+    });
+});
+
+test('state reflects speed correctly', (done) => {
+    const client = new WebSocket('ws://127.0.0.1:8080');
+
+    client.on('message', (msg) => {
+        const data = JSON.parse(msg);
+
+        if (data.speed < 50) {
+            expect(data.state).toBe('idle');
+        } else if (data.speed < 300) {
+            expect(data.state).toBe('tracking');
+        } else {
+            expect(data.state).toBe('flick');
+        }
+
+        client.close();
+        done();
+    });
+});
