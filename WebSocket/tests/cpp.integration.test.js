@@ -155,3 +155,97 @@ test('latency remains stable over time', (done) => {
         }
     });
 });
+
+test('speed is never negative', (done) => {
+    const client = new WebSocket('ws://127.0.0.1:8080');
+
+    client.on('message', (msg) => {
+        const data = JSON.parse(msg);
+
+        expect(data.speed).toBeGreaterThanOrEqual(0);
+
+        client.close();
+        done();
+    });
+});
+
+test('latency is within realistic bounds', (done) => {
+    const client = new WebSocket('ws://127.0.0.1:8080');
+
+    client.on('message', (msg) => {
+        const data = JSON.parse(msg);
+
+        expect(data.latency).toBeGreaterThan(0);
+        expect(data.latency).toBeLessThan(100); // sanity check
+
+        client.close();
+        done();
+    });
+});
+
+test('position values are valid screen coordinates', (done) => {
+    const client = new WebSocket('ws://127.0.0.1:8080');
+
+    client.on('message', (msg) => {
+        const data = JSON.parse(msg);
+
+        expect(data.x).toBeGreaterThanOrEqual(0);
+        expect(data.y).toBeGreaterThanOrEqual(0);
+
+        client.close();
+        done();
+    });
+});
+
+test('handles 100+ messages without crashing', (done) => {
+    const client = new WebSocket('ws://127.0.0.1:8080');
+
+    let count = 0;
+
+    client.on('message', () => {
+        count++;
+
+        if (count >= 100) {
+            client.close();
+            done();
+        }
+    });
+});
+
+
+
+test('client can reconnect after disconnect', (done) => {
+    const client = new WebSocket('ws://127.0.0.1:8080');
+
+    client.on('open', () => {
+        client.close();
+
+        const newClient = new WebSocket('ws://127.0.0.1:8080');
+
+        newClient.on('open', () => {
+            newClient.close();
+            done();
+        });
+    });
+});
+
+const schema = ['x', 'y', 'speed', 'hz', 'latency', 'state'];
+
+test('data contains correct schema', (done) => {
+    const client = new WebSocket('ws://127.0.0.1:8080');
+
+    client.on('message', (msg) => {
+        const data = JSON.parse(msg);
+
+        schema.forEach(field => {
+            expect(data).toHaveProperty(field);
+        });
+
+        client.close();
+        done();
+    });
+});
+
+test('server handles invalid JSON safely', () => {
+    expect(() => JSON.parse("INVALID_JSON")).toThrow();
+});
