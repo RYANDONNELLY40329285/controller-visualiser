@@ -339,3 +339,29 @@ test('multiple clients receive data simultaneously', (done) => {
         checkDone();
     });
 });
+
+test('multiple clients receive data simultaneously', (done) => {
+    const client1 = new WebSocket('ws://127.0.0.1:8080');
+    const client2 = new WebSocket('ws://127.0.0.1:8080');
+
+    let received1 = false;
+    let received2 = false;
+
+    function checkDone() {
+        if (received1 && received2) {
+            client1.close();
+            client2.close();
+            done();
+        }
+    }
+
+    client1.on('message', () => {
+        received1 = true;
+        checkDone();
+    });
+
+    client2.on('message', () => {
+        received2 = true;
+        checkDone();
+    });
+});
